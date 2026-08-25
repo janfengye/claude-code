@@ -6,12 +6,19 @@
   <author><name>Anthropic</name></author>
   <link rel="alternate" type="text/html" href="https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md"/>
   <link rel="self" type="application/atom+xml" href="https://raw.githubusercontent.com/anthropics/claude-code/main/feed.xml"/>
-  <updated>2026-08-24T23:40:17Z</updated>
+  <updated>2026-08-25T05:13:17Z</updated>
+  <entry>
+    <id>https://github.com/anthropics/claude-code/releases/tag/v2.1.245</id>
+    <title>Claude Code v2.1.245</title>
+    <link rel="alternate" type="text/html" href="https://github.com/anthropics/claude-code/releases/tag/v2.1.245"/>
+    <updated>2026-08-25T05:13:17Z</updated>
+    <content type="html">&lt;p&gt;• Fixed a crash on startup on Linux distributions that ship glibc 2.44 (for example Arch Linux, CachyOS and Fedora Rawhide)&lt;/p&gt;</content>
+  </entry>
   <entry>
     <id>https://github.com/anthropics/claude-code/releases/tag/v2.1.243</id>
     <title>Claude Code v2.1.243</title>
     <link rel="alternate" type="text/html" href="https://github.com/anthropics/claude-code/releases/tag/v2.1.243"/>
-    <updated>2026-08-24T23:40:17Z</updated>
+    <updated>2026-08-25T05:13:17Z</updated>
     <content type="html">&lt;p&gt;• Added a Loops breakdown to /usage: per-loop run count, total tokens, tokens per run, and last run, so runaway or chatty /loop tasks are easy to spot&lt;/p&gt;
 &lt;p&gt;• Added modelPicker setting: curate the /model picker with an ordered, labeled list of models (any id spelling, including Vertex/Bedrock ids), appended to or replacing the built-in lineup&lt;/p&gt;
 &lt;p&gt;• Added promptCacheTtl and subagentPromptCacheTtl settings so API-key and cloud-provider users can keep a 1-hour prompt cache on the main conversation while subagents stay at 5 minutes&lt;/p&gt;
@@ -575,32 +582,5 @@
 &lt;p&gt;• Changed auto-compact to keep sessions on unrecognized model IDs within the assumed context window instead of letting them grow past it; set CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT=1 to restore the previous behavior&lt;/p&gt;
 &lt;p&gt;• Changed /review to be an alias of /code-review, which reviews the current diff or a PR (/code-review &amp;lt;level&amp;gt; &amp;lt;pr#&amp;gt;); use /code-review ultra for a deep cloud review&lt;/p&gt;
 &lt;p&gt;• Changed /code-review with no effort level to reuse the level you typed last; type a level like /code-review high to change it&lt;/p&gt;</content>
-  </entry>
-  <entry>
-    <id>https://github.com/anthropics/claude-code/releases/tag/v2.1.222</id>
-    <title>Claude Code v2.1.222</title>
-    <link rel="alternate" type="text/html" href="https://github.com/anthropics/claude-code/releases/tag/v2.1.222"/>
-    <updated>2026-08-04T22:39:48Z</updated>
-    <content type="html">&lt;p&gt;• Fixed worktree-isolated sessions and their subagents being able to run destructive git commands against the main checkout; isolation now applies to file edits and Bash in every session type&lt;/p&gt;
-&lt;p&gt;• Fixed PreToolUse auto-allow hooks bypassing tool restrictions in background agent tasks (summaries, compaction, renames)&lt;/p&gt;
-&lt;p&gt;• Fixed /usage-credits on Team and Enterprise showing "you've already sent a usage credit request" for members whose earlier request was dismissed, blocking them from sending a new one&lt;/p&gt;
-&lt;p&gt;• Fixed the startup connectivity check hanging and then failing behind an HTTPS proxy; it now uses the same proxy-aware transport as API requests and times out with a clear message&lt;/p&gt;
-&lt;p&gt;• Fixed "Connection closed mid-response" errors being reported on responses that had actually completed&lt;/p&gt;
-&lt;p&gt;• Fixed /usage overattributing usage to MCP servers: a server's share now reflects only the requests that actually consumed its tool results, instead of every turn after any call to it&lt;/p&gt;
-&lt;p&gt;• Fixed sessions not linking to pull requests created after the branch was pushed, including through the GitHub REST API&lt;/p&gt;
-&lt;p&gt;• Fixed org-restricted model: opus-style subagent and teammate family aliases dropping to the parent model instead of stepping down to the newest org-allowed model in the family&lt;/p&gt;
-&lt;p&gt;• Fixed stream idle timeout firing on custom ANTHROPIC_BASE_URL gateways despite server keep-alive pings arriving on the wire&lt;/p&gt;
-&lt;p&gt;• Fixed claude.ai connectors being falsely marked as needing authorization when the session token is invalid — they now show a /login hint instead&lt;/p&gt;
-&lt;p&gt;• Fixed tool errors not being displayed for tools no longer available locally, for example after an MCP server is removed&lt;/p&gt;
-&lt;p&gt;• Fixed SendMessage rejecting a long summary — it now truncates instead, so sends no longer fail on a character limit&lt;/p&gt;
-&lt;p&gt;• Fixed the spinner's effort label in a subagent's transcript view showing the session's effort level instead of the subagent's own effort: setting&lt;/p&gt;
-&lt;p&gt;• Fixed rare crashes when a file watcher hit a filesystem error or during file-watcher teardown&lt;/p&gt;
-&lt;p&gt;• Fixed screen readers re-reading the whole input line on every backspace in --ax-screen-reader mode — end-of-line deletions now echo just the deleted characters&lt;/p&gt;
-&lt;p&gt;• Fixed host model-selection keys not taking precedence over a stale on-disk managed-settings.json when CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST is set&lt;/p&gt;
-&lt;p&gt;• Improved auto mode safety: messages sent to other agent sessions via SendMessage are now evaluated by the permission classifier before dispatch&lt;/p&gt;
-&lt;p&gt;• Improved the refusal when Claude tries to invoke a skill with disable-model-invocation: Claude is now told to ask you to run the skill instead of replicating its workflow&lt;/p&gt;
-&lt;p&gt;• Improved the /diff view, the Remote Control workspace diff, and file-edit diffs in Claude Code on the web sessions to use raw git blob content, ignoring workspace-configured diff drivers and textconv&lt;/p&gt;
-&lt;p&gt;• Changed Remote Control auto-start so repo-local settings (.claude/settings.json or .claude/settings.local.json) can no longer turn it on (they can still turn it off); enable it at user scope via /config&lt;/p&gt;
-&lt;p&gt;• Removed ultraplan feature&lt;/p&gt;</content>
   </entry>
 </feed>
