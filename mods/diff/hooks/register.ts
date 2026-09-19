@@ -1,4 +1,5 @@
 import type {
+  Args,
   On,
   PaneOpenArgs,
   ResultOf,
@@ -13,7 +14,9 @@ import { drawnFilesOf } from './drawn-files-of'
 import { entryKindsOf } from './entry-kinds-of'
 import type Git from './git'
 import type { Host } from './host'
+import { isCheckpointing } from './is-checkpointing'
 import { isOnPaneSurface } from './is-on-pane-surface'
+import { isRecord } from './is-record'
 import Limits from './limits'
 import { mapLimited } from './map-limited'
 import { messageOf } from './message-of'
@@ -30,8 +33,8 @@ import Views from './views'
  * pane's drawing and refresh, its opening on Claude's first edit, the ask.
  *
  * Git runs when the built-in's would: `session.start` binds the host and
- * registers `/diff`; `/diff` or the first edit with room pins the backend
- * where the session started, until `/clear`; an open pane alone fetches.
+ * registers `/diff`; `/diff` or the main loop's first checkpointed edit with
+ * room pins the backend, until `/clear`; a docked pane fetches, then opens.
  *
  * @param on the engine's registrar
  */
@@ -50,6 +53,7 @@ export function register(on: On) {
   let isRefreshing = false
   let isRefreshQueued = false
   let generation = 0
+  let landed = 0
   let bodyStamp: string | null = null
   let bodyBase: string | null = null
 
@@ -394,7 +398,7 @@ export function register(on: On) {
   async function openPane(
     engine: Host,
     trigger: (typeof Record.SHOWN_TRIGGERS)[number],
-  ): Promise<void> {
+  ): Promise<boolean> {
     const isDialog = model.isFullscreen === false
 
     model = {
@@ -406,11 +410,25 @@ export function register(on: On) {
 
     dialogRows = isDialog ? Views.dialogRowsOf(model) : null
 
-    await engine.openPane(
+    const landedBefore = landed
+
+    if (!isDialog) {
+      await refresh(engine).catch(() => undefined)
+    }
+
+    const opened = await engine.openPane(
       isDialog
         ? { ...dialogPane(), focus: true }
         : { id: Names.PANE_ID, title: Names.PANE_TITLE, holdToasts: true },
     )
+
+    const isWaiting = isRecord(opened) && opened.isPlaced === false
+
+    if (isWaiting) {
+      await engine.closePane({ id: Names.PANE_ID }).catch(() => undefined)
+
+      return false
+    }
 
     isPaneOpen = true
 
@@ -421,7 +439,13 @@ export function register(on: On) {
       Record.recorderOf(engine).shown(trigger, Record.widthBucketOf(columns))
     }
 
-    void refresh(engine)
+    const isStale = isDialog || landed !== landedBefore
+
+    if (isStale) {
+      void refresh(engine)
+    }
+
+    return true
   }
 
   async function closePane(engine: Host): Promise<void> {
@@ -460,6 +484,12 @@ export function register(on: On) {
       return
     }
 
+    const isCheckpointed = await engine.isCheckpointing().catch(() => true)
+
+    if (!isCheckpointed || isTaken()) {
+      return
+    }
+
     await pinBackend(engine)
 
     if (!backend || isTaken()) {
@@ -467,7 +497,7 @@ export function register(on: On) {
     }
 
     hasAutoOpened = true
-    await openPane(engine, 'auto_open')
+    hasAutoOpened = await openPane(engine, 'auto_open')
   }
 
   function disarm(engine: Host) {
@@ -602,6 +632,11 @@ export function register(on: On) {
         readFile: path => $.fs.read(path),
         storeGet: key => $.store.get(key),
         storeSet: (key, value) => $.store.set(key, value),
+        isCheckpointing: async () =>
+          isCheckpointing(
+            await $.settings.read(),
+            await $.env.get('CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING'),
+          ),
         messages: () => $.session.messages(),
         invalidate: () => $.ui.invalidate('ui.render'),
         status: text => $.ui.status(text),
@@ -699,7 +734,14 @@ export function register(on: On) {
     }
 
     const isOpening = toggle === 'open'
-    await (isOpening ? openPane(host, 'manual') : closePane(host))
+
+    const isDone = isOpening
+      ? await openPane(host, 'manual')
+      : await closePane(host).then(() => true)
+
+    if (!isDone) {
+      return { text: Names.RESIZE_TERMINAL_TEXT }
+    }
 
     if (!isFullscreen) {
       return isOpening ? {} : { text: Names.DIALOG_DISMISSED_TEXT }
@@ -818,10 +860,10 @@ export function register(on: On) {
 
   function afterTool(
     engine: Host,
-    tool: string,
+    e: Args<'tool.call'>,
     result: ResultOf['tool.call'] | undefined,
   ) {
-    const isEdit = Tools.EDITING_TOOLS.some(name => name === tool)
+    const isEdit = Tools.EDITING_TOOLS.some(name => name === e.tool)
 
     const hasEdited =
       isEdit &&
@@ -829,15 +871,21 @@ export function register(on: On) {
       result.deny === undefined &&
       result.isError !== true
 
-    const isStale =
-      isPaneOpen &&
-      (isEdit ? hasEdited : result === undefined || result.deny === undefined)
+    const hasLanded = isEdit
+      ? hasEdited
+      : result === undefined || result.deny === undefined
 
-    if (isStale) {
+    if (hasLanded) {
+      landed += 1
+    }
+
+    if (hasLanded && isPaneOpen) {
       scheduleRefresh(engine)
     }
 
-    if (hasEdited) {
+    const isMainLoopEdit = hasEdited && e.agentId === undefined
+
+    if (isMainLoopEdit) {
       void openOnFirstEdit(engine).catch(() => undefined)
     }
   }
@@ -854,7 +902,7 @@ export function register(on: On) {
         return result
       } finally {
         if (host) {
-          afterTool(host, e.tool, result)
+          afterTool(host, e, result)
         }
       }
     },
